@@ -44,6 +44,7 @@ namespace RAGSharp.Stores
                     e.Id,
                     queryVector.CosineSimilarity(e.Embedding),
                     e.Content,
+                    e.Source,
                     e.Metadata))
                 .OrderByDescending(r => r.Score)
                 .Take(topK)

@@ -1,17 +1,15 @@
-﻿using RAGSharp;
-using RAGSharp.Embeddings;
+﻿using RAGSharp.Embeddings;
 using RAGSharp.Embeddings.Providers;
 using RAGSharp.Embeddings.Tokenizers;
 using RAGSharp.IO;
 using RAGSharp.RAG;
-using RAGSharp.RAG.Embeddings;
 using RAGSharp.Stores;
 
 namespace SampleApp.Examples
 {
     public static class Example4_Url
     {
-        public static async Task Run()
+        public static async Task Run(string query)
         {
             Console.WriteLine("=== Example 4: URL loader (Wikipedia page) ===");
 
@@ -25,14 +23,19 @@ namespace SampleApp.Examples
 
             ITokenizer tokenizer = new SharpTokenTokenizer("gpt-3.5-turbo");
 
-            var retriever = new RagRetriever(embeddings, store, tokenizer);
+            var retriever = new RagRetriever(embeddings, store);
 
-            var docs = await new UrlLoader().LoadAsync("https://en.wikipedia.org/wiki/Artificial_intelligence");
+            var docs = await new UrlLoader().LoadAsync("https://en.wikipedia.org/wiki/Quantum_mechanics");
             await retriever.AddDocumentsAsync(docs);
 
-            var results = await retriever.Search("machine learning history");
+            var results = await retriever.Search(query);
+
+            Console.WriteLine($"\nTop {results.Count} results for: \"{query}\"");
             foreach (var r in results)
-                Console.WriteLine($"{r.Score:F2} - {r.Content}");
+                Console.WriteLine(
+                    $"Score: {r.Score:F2} | Source: {r.Source}\n" +
+                    $"Text: {r.Content}\n"
+                );
         }
     }
 }

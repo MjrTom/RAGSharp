@@ -1,11 +1,6 @@
-﻿using RAGSharp;
-using RAGSharp.Embeddings;
+﻿using RAGSharp.Embeddings;
 using RAGSharp.Embeddings.Providers;
-using RAGSharp.Embeddings.Tokenizers;
-using RAGSharp.IO;
-using RAGSharp.RAG;
-using RAGSharp.RAG.Embeddings;
-using RAGSharp.Stores;
+using RAGSharp.Utils;
 
 namespace SampleApp.Examples
 {
@@ -15,24 +10,21 @@ namespace SampleApp.Examples
         {
             Console.WriteLine("=== Example 5: Manual document ===");
 
-            var store = new InMemoryVectorStore();
-
             IEmbeddingClient embeddings = new OpenAIEmbeddingClient(
-                baseUrl: "http://127.0.0.1:1234/v1",
-                apiKey: "lmstudio",
-                defaultModel: "text-embedding-3-small"
-            );
+               baseUrl: "http://127.0.0.1:1234/v1",
+               apiKey: "lmstudio",
+               defaultModel: "text-embedding-3-small"
+           );
 
-            ITokenizer tokenizer = new SharpTokenTokenizer("gpt-3.5-turbo");
+            var text1 = "Quantum entanglement links particles at a distance.";
+            var text2 = "Particles can share states instantly even when far apart.";
 
-            var retriever = new RagRetriever(embeddings, store, tokenizer);
+            var v1 = (await embeddings.GetEmbeddingAsync(text1)).Normalize();
+            var v2 = (await embeddings.GetEmbeddingAsync(text2)).Normalize();
 
-            var doc = new Document("RAG stands for Retrieval-Augmented Generation.", "manual");
-            await retriever.AddDocumentAsync(doc);
+            var score = v1.CosineSimilarity(v2);
 
-            var results = await retriever.Search("what is RAG?");
-            foreach (var r in results)
-                Console.WriteLine($"{r.Score:F2} - {r.Content}");
+            Console.WriteLine($"Similarity: {score:F4}");
         }
     }
 }

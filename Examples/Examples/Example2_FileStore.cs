@@ -1,10 +1,8 @@
-﻿using RAGSharp;
-using RAGSharp.Embeddings;
+﻿using RAGSharp.Embeddings;
 using RAGSharp.Embeddings.Providers;
 using RAGSharp.Embeddings.Tokenizers;
 using RAGSharp.IO;
 using RAGSharp.RAG;
-using RAGSharp.RAG.Embeddings;
 using RAGSharp.Stores;
 
 namespace SampleApp.Examples
@@ -15,7 +13,8 @@ namespace SampleApp.Examples
         {
             Console.WriteLine("=== Example 2: File-backed store ===");
 
-            var store = new FileVectorStore();
+            var baseDir = AppContext.BaseDirectory;
+            var store = new FileVectorStore(baseDir, "sampleKb.json");
 
             IEmbeddingClient embeddings = new OpenAIEmbeddingClient(
                 baseUrl: "http://127.0.0.1:1234/v1",
@@ -25,9 +24,8 @@ namespace SampleApp.Examples
 
             ITokenizer tokenizer = new SharpTokenTokenizer("gpt-3.5-turbo");
 
-            var retriever = new RagRetriever(embeddings, store, tokenizer);
+            var retriever = new RagRetriever(embeddings, store);
 
-            var baseDir = AppContext.BaseDirectory;
             var filePath = Path.Combine(baseDir, "sample.txt");
 
             var loader = new FileLoader();

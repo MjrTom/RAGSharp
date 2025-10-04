@@ -20,6 +20,11 @@ namespace RAGSharp.Stores
         public string Content { get; }
 
         /// <summary>
+        /// Source identifier (e.g. file path, URL).
+        /// </summary>
+        public string Source { get; }
+
+        /// <summary>
         /// Optional metadata (e.g. file name, source URL).
         /// </summary>
         public IReadOnlyDictionary<string, string> Metadata { get; }
@@ -32,11 +37,12 @@ namespace RAGSharp.Stores
         /// <summary>
         /// Create a new vector record.
         /// </summary>
-        public VectorRecord(string id, string content, float[] embedding, IReadOnlyDictionary<string, string> metadata = null)
+        public VectorRecord(string id, string content, float[] embedding, string source, IReadOnlyDictionary<string, string> metadata = null)
         {
             Id = id ?? throw new ArgumentNullException(nameof(id));
             Content = content ?? throw new ArgumentNullException(nameof(content));
             Embedding = embedding ?? throw new ArgumentNullException(nameof(embedding));
+            Source = source ?? string.Empty;
             Metadata = metadata ?? new Dictionary<string, string>();
         }
 
@@ -49,7 +55,8 @@ namespace RAGSharp.Stores
                 id ?? Id,
                 Content,
                 embedding ?? Embedding,
-                Metadata
+                Source,      // keep source
+                Metadata     // keep metadata
             );
         }
     }

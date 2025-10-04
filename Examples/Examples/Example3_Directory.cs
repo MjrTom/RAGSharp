@@ -1,10 +1,8 @@
-﻿using RAGSharp;
-using RAGSharp.Embeddings;
+﻿using RAGSharp.Embeddings;
 using RAGSharp.Embeddings.Providers;
 using RAGSharp.Embeddings.Tokenizers;
 using RAGSharp.IO;
 using RAGSharp.RAG;
-using RAGSharp.RAG.Embeddings;
 using RAGSharp.Stores;
 
 namespace SampleApp.Examples
@@ -23,9 +21,7 @@ namespace SampleApp.Examples
                 defaultModel: "text-embedding-3-small"
             );
 
-            ITokenizer tokenizer = new SharpTokenTokenizer("gpt-3.5-turbo");
-
-            var retriever = new RagRetriever(embeddings, store, tokenizer);
+            var retriever = new RagRetriever(embeddings, store);
 
             var docs = await new DirectoryLoader().LoadAsync("docs/");
             await retriever.AddDocumentsAsync(docs);

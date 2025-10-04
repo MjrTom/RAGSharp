@@ -1,16 +1,17 @@
-﻿using RAGSharp.RAG.Embeddings;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
+using RAGSharp.Embeddings;
+using RAGSharp.Embeddings.Tokenizers;
+using RAGSharp.IO;
+using RAGSharp.Logging;
+using RAGSharp.Stores;
+using RAGSharp.Text;
+using RAGSharp.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using RAGSharp.IO;
-using RAGSharp.Stores;
-using RAGSharp.Embeddings;
-using RAGSharp.Utils;
-using RAGSharp.Embeddings.Tokenizers;
 
 namespace RAGSharp.RAG
 {
@@ -22,26 +23,28 @@ namespace RAGSharp.RAG
     {
         private readonly IEmbeddingClient _embeddings;
         private readonly IVectorStore _store;
-        private readonly ITokenizer _tokenizer;
         private readonly ILogger _logger;
-        private readonly int _chunkSize;
-        private readonly int _chunkOverlap;
+        private readonly ITextSplitter _splitter;
 
+        /// <summary>
+        /// Creates a new retriever instance.
+        /// </summary>
+        /// <param name="embeddings">Embedding client (e.g. OpenAI, local model).</param>
+        /// <param name="store">Vector store implementation (in-memory, file-backed, etc.).</param>
+        /// <param name="splitter">Text splitter for breaking documents into chunks. If null, defaults to <see cref="RecursiveTextSplitter"/>.</param>
+        /// <param name="logger">Optional logger. If null, defaults to <see cref="ConsoleLogger"/>.</param>
         public RagRetriever(
             IEmbeddingClient embeddings,
             IVectorStore store,
-            ITokenizer tokenizer = null,
-            ILogger logger = null,
-            int chunkSize = 400,
-            int chunkOverlap = 100)
+            ITextSplitter splitter = null,
+            ILogger logger = null)
         {
             _embeddings = embeddings ?? throw new ArgumentNullException(nameof(embeddings));
             _store = store ?? throw new ArgumentNullException(nameof(store));
-            _tokenizer = tokenizer ?? new SharpTokenTokenizer();
-            _logger = logger;
-            _chunkSize = chunkSize;
-            _chunkOverlap = chunkOverlap;
+            _splitter = splitter ?? new RecursiveTextSplitter(new SharpTokenTokenizer("gpt-3.5-turbo"));
+            _logger = logger ?? new ConsoleLogger();
         }
+
 
         /// <inheritdoc/>
         public Task AddDocumentAsync(Document doc) =>
@@ -55,21 +58,21 @@ namespace RAGSharp.RAG
         {
             // chunk all documents into vector records with empty embeddings
             var allChunks = docs
-                .SelectMany(d =>
-                    SplitByParagraphs(d.Content)
-                        .SelectMany(s => Chunk(s, _chunkSize, _chunkOverlap)
-                            .Select(chunk =>
-                                new VectorRecord(
-                                    HashingHelper.ComputeId(chunk),
-                                    chunk,
-                                    Array.Empty<float>(),
-                                    new Dictionary<string, string>
-                                    {
-                                        { "Source", d.Source }
-                                    }))))
-                .GroupBy(x => x.Id)
-                .Select(g => g.First())
-                .ToList();
+             .SelectMany(d =>
+             {
+                 return _splitter.Split(d.Content)
+                     .Select(chunk => new VectorRecord(
+                         id: HashingHelper.ComputeId(chunk),
+                         content: chunk,
+                         embedding: Array.Empty<float>(),
+                         source: d.Source,
+                         metadata: d.Metadata
+                     ));
+             })
+             .GroupBy(x => x.Id)
+             .Select(g => g.First())
+             .ToList();
+
 
             if (allChunks.Count == 0)
             {
@@ -113,6 +116,7 @@ namespace RAGSharp.RAG
                             x.Id,
                             x.Content,
                             vectors[j].Normalize(),
+                            x.Source,
                             x.Metadata))
                         .ToList();
 
@@ -130,38 +134,6 @@ namespace RAGSharp.RAG
 
             await _store.AddBatchAsync(itemsToAdd);
             _logger?.LogInformation($"[RAG] Ingestion complete. {itemsToAdd.Count} chunks added to persistent store.");
-        }
-
-        /// <summary>
-        /// Splits text into paragraphs.
-        /// Paragraphs are considered as blocks of text separated by 2+ newlines. This is a heuristic, not language-aware.
-        /// </summary>
-        private IEnumerable<string> SplitByParagraphs(string text)
-        {
-            if (string.IsNullOrWhiteSpace(text))
-                yield break;
-
-            var normalized = text.Replace("\r\n", "\n").Replace("\r", "\n");
-            var parts = Regex.Split(normalized, @"\n{2,}");
-
-            foreach (var part in parts)
-                if (!string.IsNullOrWhiteSpace(part))
-                    yield return part;
-        }
-
-        /// <summary>
-        /// Splits text into overlapping token chunks.
-        /// </summary>
-        private IEnumerable<string> Chunk(string text, int maxTokens, int overlap)
-        {
-            var tokens = _tokenizer.Encode(text);
-
-            for (int start = 0; start < tokens.Count; start += maxTokens - overlap)
-            {
-                var end = Math.Min(start + maxTokens, tokens.Count);
-                var chunkTokens = tokens.Skip(start).Take(end - start);
-                yield return _tokenizer.Decode(chunkTokens);
-            }
         }
 
         /// <inheritdoc/>

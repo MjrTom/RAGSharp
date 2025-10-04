@@ -25,15 +25,21 @@ namespace RAGSharp.Stores
         public string Content { get; }
 
         /// <summary>
+        /// Source identifier (e.g. file path, URL).
+        /// </summary>
+        public string Source { get; }
+
+        /// <summary>
         /// Optional metadata associated with the chunk.
         /// </summary>
         public IReadOnlyDictionary<string, string> Metadata { get; }
 
-        public SearchResult(string id, double score, string content, IReadOnlyDictionary<string, string> metadata = null)
+        public SearchResult(string id, double score, string content, string source, IReadOnlyDictionary<string, string> metadata = null)
         {
             Id = id;
             Score = score;
             Content = content;
+            Source = source ?? string.Empty;
             Metadata = metadata ?? new Dictionary<string, string>();
         }
     }
