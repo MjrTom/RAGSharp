@@ -121,7 +121,7 @@ namespace RAGSharp.IO
                     var value = row.SelectSingleNode("./td")?.InnerText?.Trim();
                     if (!string.IsNullOrEmpty(header) && !string.IsNullOrEmpty(value))
                     {
-                        sb.AppendLine($"{TextCleaner.CleanHtmlText(header)}: {TextCleaner.CleanHtmlText(value)}");
+                        sb.AppendLine($"{CleanHtmlText(header)}: {CleanHtmlText(value)}");
                     }
                 }
                 sb.AppendLine();

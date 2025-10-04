@@ -1,20 +1,19 @@
 ﻿using SampleApp.Examples;
 
-class Program
+namespace SampleApp
 {
-    static async Task Main()
+    class Program
     {
-        while (true)
+        static async Task Main(string[] args)
         {
-            Console.WriteLine("Enter your query to search:");
-            string query = Console.ReadLine();
+            var query = "What is quantum mechanics?";
 
-            // Pick which example to run by uncommenting:
-            await Example0_Basic.Run(query);
-            // await Example2_FileStore.Run();
-            // await Example3_Directory.Run(); 
-            // await Example4_Url.Run(query);
-            // await Example5_Manual.Run();
+            // Uncomment the example you want to run:
+
+            await Example1_QuickStart.Run(query);
+            // await Example2_VectorStores.Run(query);
+            // await Example3_LoadingData.Run(query);
+            // await Example4_LowLevel.Run();
         }
     }
 }
