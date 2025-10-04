@@ -50,7 +50,18 @@ foreach (var r in results)
 
 
 ## ⚙️ Core Features & Architecture
-RAGSharp is built around a pluggable architecture, where every major component is an interface.
+RAGSharp is built around a pluggable architecture, where every major component is an interface. 
+Every RAG pipeline in RAGSharp follows this flow. Each part is pluggable (custom loaders, stores, embedding clients).
+```
+   [ DocumentLoader ] → [ TextSplitter ] → [ Embeddings ] → [ VectorStore ] → [ Retriever ]
+```
+- **IDocumentLoader** → FileLoader, DirectoryLoader, UrlLoader, WebSearchLoader
+
+- **ITextSplitter** → RecursiveTextSplitter (paragraph → sentence → token windows)
+
+- **IEmbeddingClient** → OpenAIEmbeddingClient (swap for local models easily)
+
+- **IVectorStore** → InMemoryVectorStore, FileVectorStore (persistent)
 
 ### 1. Document Loading (RAGSharp.IO)
 Loaders fetch raw data and convert it into a list of Document objects.
@@ -65,10 +76,29 @@ Loaders fetch raw data and convert it into a list of Document objects.
 ### 2. Text Splitting (RAGSharp.Text)
 The library uses a token-aware Recursive Text Splitter, inspired by best practices in the RAG community, to maintain semantic coherence.
 
+Here’s how it works:
+```
+- Input Text
+    ↓
+Split by paragraphs (\n\n)
+    ↓
+For each paragraph:
+    ├─ Fits in chunk size? → Yield whole paragraph
+    └─ Too large? → Split by sentences
+                      ↓
+                For each sentence:
+                    ├─ Buffer + sentence fits? → Add to buffer
+                    └─ Too large?
+                         ├─ Yield buffer
+                         └─ Single sentence too large? → Token window split
+                                                       └─ Sliding window with overlap
+```
+
 - Splits first by large delimiters (e.g., \n\n for paragraphs).
 - If chunks are too large, it recursively splits by smaller delimiters (e.g., sentences).
 - Final fallback uses a sliding token window with overlap to ensure token-accurate chunks.
 
+This ensures semantically clean chunks without breaking math, code, or paragraphs awkwardly.
 Uses SharpToken for accurate GPT-family token counting.
 
 ### 3. Embeddings & Tokenization (RAGSharp.Embeddings)
@@ -95,40 +125,6 @@ The RagRetriever orchestrates the entire pipeline:
 - Stores the resulting vectors in the IVectorStore.
 - Performs semantic search (dot product/cosine similarity) against the store based on a query.
 
-### How RAGSharp Works
-- RAG Pipeline - Every RAG pipeline in RAGSharp follows this flow. Each part is pluggable (custom loaders, stores, embedding clients).
-```
-   [ DocumentLoader ] → [ TextSplitter ] → [ Embeddings ] → [ VectorStore ] → [ Retriever ]
-```
-IDocumentLoader → FileLoader, DirectoryLoader, UrlLoader, WebSearchLoader
-
-ITextSplitter → RecursiveTextSplitter (paragraph → sentence → token windows)
-
-IEmbeddingClient → OpenAIEmbeddingClient (swap for local models easily)
-
-IVectorStore → InMemoryVectorStore, FileVectorStore (persistent)
-
-
-- Recursive Text Splitter 
-Here’s how it works:
-```
-- Input Text
-    ↓
-Split by paragraphs (\n\n)
-    ↓
-For each paragraph:
-    ├─ Fits in chunk size? → Yield whole paragraph
-    └─ Too large? → Split by sentences
-                      ↓
-                For each sentence:
-                    ├─ Buffer + sentence fits? → Add to buffer
-                    └─ Too large?
-                         ├─ Yield buffer
-                         └─ Single sentence too large? → Token window split
-                                                       └─ Sliding window with overlap
-```
-
-This ensures semantically clean chunks without breaking math, code, or paragraphs awkwardly.
 
 ## 📚 Examples & Documentation
 Clone the repo and run the sample app.
