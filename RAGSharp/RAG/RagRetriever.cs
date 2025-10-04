@@ -42,7 +42,16 @@ namespace RAGSharp.RAG
             _embeddings = embeddings ?? throw new ArgumentNullException(nameof(embeddings));
             _store = store ?? throw new ArgumentNullException(nameof(store));
             _splitter = splitter ?? new RecursiveTextSplitter(new SharpTokenTokenizer("gpt-3.5-turbo"));
-            _logger = logger ?? new ConsoleLogger();
+
+#if DEBUG
+            var defaultLevel = LogLevel.Trace;
+#else
+                var defaultLevel = LogLevel.Information;
+#endif
+
+            _logger = logger ?? new ConsoleLogger(category: typeof(RagRetriever).Name, minLevel: defaultLevel
+            );
+
         }
 
 
@@ -76,21 +85,21 @@ namespace RAGSharp.RAG
 
             if (allChunks.Count == 0)
             {
-                _logger?.LogInformation("[RAG] No chunks produced from input documents.");
+                _logger?.LogInformation("No chunks produced from input documents.");
                 return;
             }
 
-            _logger?.LogInformation($"[RAG] {allChunks.Count} total unique chunks produced.");
+            _logger?.LogInformation($"{allChunks.Count} total unique chunks produced.");
 
             // filter out already-present chunks
             var newChunks = allChunks.Where(c => !_store.Contains(c.Id)).ToList();
             if (newChunks.Count == 0)
             {
-                _logger?.LogInformation("[RAG] All chunks already exist in the store. Nothing new to add.");
+                _logger?.LogInformation("All chunks already exist in the store. Nothing new to add.");
                 return;
             }
 
-            _logger?.LogInformation($"[RAG] {newChunks.Count} new chunks to embed and add to store.");
+            _logger?.LogInformation($"{newChunks.Count} new chunks to embed and add to store.");
 
             // batch embedding work
             var batches = newChunks
@@ -99,7 +108,7 @@ namespace RAGSharp.RAG
                 .Select(g => g.Select(x => x.c).ToList())
                 .ToList();
 
-            _logger?.LogInformation($"[RAG] Processing {batches.Count} batches (batchSize={batchSize}, concurrency={maxParallel}).");
+            _logger?.LogInformation($"Processing {batches.Count} batches (batchSize={batchSize}, concurrency={maxParallel}).");
 
             var semaphore = new SemaphoreSlim(maxParallel);
             var tasks = batches.Select(async (batch, batchIndex) =>
@@ -107,7 +116,7 @@ namespace RAGSharp.RAG
                 await semaphore.WaitAsync();
                 try
                 {
-                    _logger?.LogDebug($"[RAG] Embedding batch {batchIndex + 1}/{batches.Count} with {batch.Count} chunks...");
+                    _logger?.LogDebug($"=> Starting batch {batchIndex + 1}/{batches.Count} with {batch.Count} chunks...");
                     var texts = batch.Select(x => x.Content).ToList();
 
                     var vectors = (await _embeddings.GetEmbeddingsAsync(texts)).ToArray();
@@ -120,8 +129,13 @@ namespace RAGSharp.RAG
                             x.Metadata))
                         .ToList();
 
-                    _logger?.LogDebug($"[RAG] Completed embeddings for batch {batchIndex + 1}.");
+                    _logger?.LogDebug($"<= Completed embeddings for batch {batchIndex + 1}.");
                     return items;
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex, $"Failed batch {batchIndex + 1}/{batches.Count}");
+                    throw;
                 }
                 finally
                 {
@@ -133,7 +147,7 @@ namespace RAGSharp.RAG
             var itemsToAdd = results.SelectMany(r => r).ToList();
 
             await _store.AddBatchAsync(itemsToAdd);
-            _logger?.LogInformation($"[RAG] Ingestion complete. {itemsToAdd.Count} chunks added to persistent store.");
+            _logger?.LogInformation($"Ingestion complete. {itemsToAdd.Count} chunks added to persistent store.");
         }
 
         /// <inheritdoc/>

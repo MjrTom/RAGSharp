@@ -44,7 +44,7 @@ namespace SampleApp.Examples
             IVectorStore store = new FileVectorStore(storePath, "vectors.json");
 
             // Logger → use console logger (or inject custom)
-            ILogger logger = new ConsoleLogger();
+            ILogger logger = new ConsoleLogger(category: "Example5_Advanced", minLevel: LogLevel.Trace);
 
             // Build retriever with all injectables
             var retriever = new RagRetriever(

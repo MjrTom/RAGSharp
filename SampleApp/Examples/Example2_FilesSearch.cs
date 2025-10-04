@@ -13,10 +13,10 @@ namespace SampleApp.Examples
     /// <summary>
     /// Load all text files from a directory.
     /// </summary>
-    public static class Example2_FilesLoading
+    public static class Example2_FilesSearch
     {
         static FileVectorStore persistentStore;
-        static Example2_FilesLoading()
+        static Example2_FilesSearch()
         {
             var dataPath = Path.Combine(AppContext.BaseDirectory, "data");
             Directory.CreateDirectory(dataPath);

@@ -76,11 +76,11 @@ namespace RAGSharp.Stores
                 var list = _store.Values.ToList();
                 var json = JsonSerializer.Serialize(list, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(_persistPath, json);
-                _logger?.LogInformation($"[RAG] Saved {_store.Count} records to {_persistPath}");
+                _logger?.LogInformation($"Saved {_store.Count} records to {_persistPath}");
             }
             catch (Exception ex)
             {
-                _logger?.LogError($"[RAG] Failed to save store: {ex.Message}");
+                _logger?.LogError($"Failed to save store: {ex.Message}");
             }
         }
 
@@ -97,11 +97,11 @@ namespace RAGSharp.Stores
                 foreach (var e in list)
                     _store.TryAdd(e.Id, e);
 
-                _logger?.LogInformation($"[RAG] Loaded {_store.Count} records from {_persistPath}");
+                _logger?.LogInformation($"Loaded {_store.Count} records from {_persistPath}");
             }
             catch (Exception ex)
             {
-                _logger?.LogError($"[RAG] Failed to load store: {ex.Message}");
+                _logger?.LogError($"Failed to load store: {ex.Message}");
             }
         }
     }
