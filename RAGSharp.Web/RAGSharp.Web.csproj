@@ -12,4 +12,8 @@
     <ProjectReference Include="..\RAGSharp\RAGSharp.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="IO\" />
+  </ItemGroup>
+
 </Project>

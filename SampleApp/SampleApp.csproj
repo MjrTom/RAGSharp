@@ -8,7 +8,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\RAGSharp.Web\RAGSharp.Web.csproj" />
 		<ProjectReference Include="..\RAGSharp\RAGSharp.csproj" />
 	</ItemGroup>
 
