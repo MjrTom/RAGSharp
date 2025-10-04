@@ -16,8 +16,7 @@ RAGSharp fills this gap. It gives you a local-first, minimal, pure .NET RAG solu
 ✅ **Composability**: Minimal code, built on clean interfaces (IVectorStore, IEmbeddingClient).  
 ✅ **Persistent Storage**: File-based vector storage included by default.
 
-## 📦 Installation
-Since we consolidated the web loaders, you only need one NuGet package!
+## 📦 Installation 
 
 ```bash
 dotnet add package RAGSharp
@@ -29,38 +28,26 @@ The goal of RAGSharp is simplicity. You only need to define your embedding model
 This example uses a local embedding model hosted by LM Studio (http://127.0.0.1:1234/v1) and an in-memory vector store.
 
 ```csharp
-using RAGSharp.Embeddings.Providers;
-using RAGSharp.IO;
-using RAGSharp.RAG;
-using RAGSharp.Stores;
 
-// 1. Load your documents (e.g., from a file)
-var docs = await new FileLoader().LoadAsync("data/sample.txt");
+var docs = await new FileLoader().LoadAsync("sample.txt");
 
-// 2. Configure the core RAG components
 var retriever = new RagRetriever(
     embeddings: new OpenAIEmbeddingClient(
-        baseUrl: "http://127.0.0.1:1234/v1", // Use your local LM Studio endpoint
-        apiKey: "lmstudio", 
+        baseUrl: "http://127.0.0.1:1234/v1",
+        apiKey: "lmstudio",
         defaultModel: "text-embedding-3-small"
     ),
-    store: new InMemoryVectorStore() // Use new FileVectorStore() for persistence
+    store: new InMemoryVectorStore()
 );
 
-// 3. Index the documents (splits text, generates embeddings, stores vectors)
 await retriever.AddDocumentsAsync(docs);
 
-// 4. Semantic Search
-var query = "What is quantum entanglement?";
-var results = await retriever.Search(query, topK: 3);
-
-Console.WriteLine($"
-Top {results.Count} results for: "{query}"");
+var results = await retriever.Search("quantum mechanics");
 foreach (var r in results)
-    Console.WriteLine($"Score: {r.Score:F4} | Source: {r.Source}
-{r.Content}
-");
+    Console.WriteLine($"{r.Score:F2}: {r.Content}");
+
 ```
+
 
 ## ⚙️ Core Features & Architecture
 RAGSharp is built around a pluggable architecture, where every major component is an interface.
@@ -108,18 +95,49 @@ The RagRetriever orchestrates the entire pipeline:
 - Stores the resulting vectors in the IVectorStore.
 - Performs semantic search (dot product/cosine similarity) against the store based on a query.
 
-## ⚔️ Comparison
+### How RAGSharp Works
+- RAG Pipeline - Every RAG pipeline in RAGSharp follows this flow. Each part is pluggable (custom loaders, stores, embedding clients).
+```
+   [ DocumentLoader ] → [ TextSplitter ] → [ Embeddings ] → [ VectorStore ] → [ Retriever ]
+```
+IDocumentLoader → FileLoader, DirectoryLoader, UrlLoader, WebSearchLoader
 
-| Feature              | RAGSharp                                                                 | Microsoft Semantic Kernel (SK)                                      |
-|----------------------|--------------------------------------------------------------------------|------------------------------------------------------------------|
-| Core Focus           | Indexing, Retrieval, and Core RAG Components.                            | Agent orchestration, Planners, and Cloud Connectors.                |
-| Dependencies         | Minimal (OpenAI SDK, SharpToken, HtmlAgilityPack).                       | Broader range for orchestration/plugins.                            |
-| Chunking             | Token-aware, recursive text splitter (high semantic quality).            | Often character-based splitting by default.                         |
-| Persistence          | FileVectorStore included out of the box.                                 | Requires separate Azure Search or proprietary integration.          |
-| C# Purity            | 100% Pure C#, designed to be simple and self-contained.                  | Pure C#, but often guides users toward Azure/Cloud infrastructure.  |
+ITextSplitter → RecursiveTextSplitter (paragraph → sentence → token windows)
+
+IEmbeddingClient → OpenAIEmbeddingClient (swap for local models easily)
+
+IVectorStore → InMemoryVectorStore, FileVectorStore (persistent)
+
+
+- Recursive Text Splitter 
+Here’s how it works:
+```
+- Input Text
+    ↓
+Split by paragraphs (\n\n)
+    ↓
+For each paragraph:
+    ├─ Fits in chunk size? → Yield whole paragraph
+    └─ Too large? → Split by sentences
+                      ↓
+                For each sentence:
+                    ├─ Buffer + sentence fits? → Add to buffer
+                    └─ Too large?
+                         ├─ Yield buffer
+                         └─ Single sentence too large? → Token window split
+                                                       └─ Sliding window with overlap
+```
+
+This ensures semantically clean chunks without breaking math, code, or paragraphs awkwardly.
 
 ## 📚 Examples & Documentation
-The best way to learn is by looking at the comprehensive examples included in the repository's SampleApp.
+Clone the repo and run the sample app.
+```
+git clone https://github.com/mrrazor22/ragsharp
+cd ragsharp/SampleApp
+dotnet run
+```
+
 
 | Example              | Description                                                                 |
 |----------------------|--------------------------------------------------------------------------------|
@@ -128,6 +146,24 @@ The best way to learn is by looking at the comprehensive examples included in th
 | Example3_WebDocSearch| Loading content from the web (UrlLoader and WebSearchLoader).               |
 | Example4_Barebones   | Using the low-level API: manual embedding and cosine similarity.            |
 | Example5_Advanced    | Full pipeline customization, injecting custom splitter, logger, and persistent store. |
+
+
+### 📂 Project Structure
+```
+RAGSharp/
+├── Embeddings/        (IEmbeddingClient, ITokenizer, providers)
+├── IO/                (FileLoader, DirectoryLoader, UrlLoader, WebSearchLoader)
+├── RAG/               (RagRetriever, IRagRetriever)
+├── Stores/            (InMemoryVectorStore, FileVectorStore)
+├── Text/              (RecursiveTextSplitter, ITextSplitter)
+├── Logging/           (ConsoleLogger)
+└── Utils/             (HashingHelper, VectorExtensions)
+
+SampleApp/
+├── data/              (sample.txt, documents/)
+└── Examples/          (Example1..Example5)
+
+```
 
 ## 📜 License
 RAGSharp is distributed under the MIT License.
