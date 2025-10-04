@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace RAGSharp.Text
+namespace RAGSharp.IO
 {
     /// <summary>
     /// Utilities for cleaning and normalizing text content.
     /// </summary>
-    internal static class TextCleaner
+    public static class TextCleaner
     {
         /// <summary>
         /// Normalize whitespace in text: collapse spaces, trim lines, normalize line endings.
@@ -34,26 +34,6 @@ namespace RAGSharp.Text
             return text.Trim();
         }
 
-        /// <summary>
-        /// Clean text extracted from HTML: decode entities and normalize whitespace.
-        /// </summary>
-        public static string CleanHtmlText(string text)
-        {
-            if (string.IsNullOrEmpty(text))
-                return string.Empty;
 
-            // Decode HTML entities (&nbsp; → space, &amp; → &, etc.)
-            text = System.Net.WebUtility.HtmlDecode(text);
-
-            // Normalize whitespace
-            text = text.Replace("\n", " ")
-                       .Replace("\r", " ")
-                       .Replace("\t", " ");
-
-            // Collapse multiple spaces
-            text = Regex.Replace(text, @"\s+", " ");
-
-            return text.Trim();
-        }
     }
 }

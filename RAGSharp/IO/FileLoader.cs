@@ -1,5 +1,4 @@
-﻿using RAGSharp.Text;
-using RAGSharp.Utils;
+﻿using RAGSharp.Utils;
 using System;
 using System.Collections.Generic;
 using System.IO;

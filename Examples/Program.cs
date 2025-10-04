@@ -10,7 +10,7 @@ class Program
             string query = Console.ReadLine();
 
             // Pick which example to run by uncommenting:
-            await Example1_Basic.Run(query);
+            await Example0_Basic.Run(query);
             // await Example2_FileStore.Run();
             // await Example3_Directory.Run(); 
             // await Example4_Url.Run(query);

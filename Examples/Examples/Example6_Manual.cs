@@ -4,7 +4,7 @@ using RAGSharp.Utils;
 
 namespace SampleApp.Examples
 {
-    public static class Example5_Manual
+    public static class Example6_Manual
     {
         public static async Task Run()
         {

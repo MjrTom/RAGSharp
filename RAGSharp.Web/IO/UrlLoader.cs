@@ -1,11 +1,11 @@
 ﻿using HtmlAgilityPack;
-using RAGSharp.Text;
 using RAGSharp.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace RAGSharp.IO
@@ -135,7 +135,7 @@ namespace RAGSharp.IO
 
             foreach (var node in mainNodes)
             {
-                var text = TextCleaner.CleanHtmlText(node.InnerText);
+                var text = CleanHtmlText(node.InnerText);
 
                 if (string.IsNullOrWhiteSpace(text) || text.Length < 20)
                     continue;
@@ -151,6 +151,28 @@ namespace RAGSharp.IO
             result = TextCleaner.NormalizeWhitespace(result);
 
             return result.Trim();
+        }
+
+        /// <summary>
+        /// Clean text extracted from HTML: decode entities and normalize whitespace.
+        /// </summary>
+        public static string CleanHtmlText(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return string.Empty;
+
+            // Decode HTML entities (&nbsp; → space, &amp; → &, etc.)
+            text = System.Net.WebUtility.HtmlDecode(text);
+
+            // Normalize whitespace
+            text = text.Replace("\n", " ")
+                       .Replace("\r", " ")
+                       .Replace("\t", " ");
+
+            // Collapse multiple spaces
+            text = Regex.Replace(text, @"\s+", " ");
+
+            return text.Trim();
         }
     }
 }
