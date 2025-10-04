@@ -1,21 +1,29 @@
-﻿using System;
+﻿using RAGSharp.Text;
+using RAGSharp.Utils;
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace RAGSharp.IO
 {
     /// <summary>
     /// Loads a single text file into a <see cref="Document"/>.
+    /// Supports automatic encoding detection and text normalization.
     /// </summary>
     public sealed class FileLoader : IDocumentLoader
     {
         private readonly long _maxFileSizeBytes;
+        private readonly bool _normalizeWhitespace;
 
-        /// <param name="maxFileSizeBytes">Maximum allowed file size in bytes (default: 10 MB).</param>
-        public FileLoader(long maxFileSizeBytes = 10_000_000)
+        public FileLoader(long maxFileSizeBytes = 10_000_000, bool normalizeWhitespace = true)
         {
+            if (maxFileSizeBytes <= 0)
+                throw new ArgumentOutOfRangeException(nameof(maxFileSizeBytes), "Max file size must be positive.");
+
             _maxFileSizeBytes = maxFileSizeBytes;
+            _normalizeWhitespace = normalizeWhitespace;
         }
 
         public async Task<IReadOnlyList<Document>> LoadAsync(string path)
@@ -27,32 +35,60 @@ namespace RAGSharp.IO
                 throw new FileNotFoundException("File not found.", path);
 
             var fileInfo = new FileInfo(path);
+
             if (fileInfo.Length > _maxFileSizeBytes)
                 throw new IOException(
                     $"File '{path}' exceeds maximum allowed size ({_maxFileSizeBytes} bytes).");
 
             try
             {
-                // .NET Standard 2.0: no ReadAllTextAsync, so wrap sync in Task.Run
-                var text = await Task.Run(() => File.ReadAllText(path));
+                var text = await Task.Run(() => ReadFileWithEncodingDetection(path));
+
+                if (string.IsNullOrWhiteSpace(text))
+                    return Array.Empty<Document>();
+
+                if (_normalizeWhitespace)
+                    text = TextCleaner.NormalizeWhitespace(text);
 
                 var metadata = new Dictionary<string, string>
                 {
                     { "FileName", fileInfo.Name },
                     { "SizeBytes", fileInfo.Length.ToString() },
-                    { "Extension", fileInfo.Extension }
+                    { "Extension", fileInfo.Extension },
+                    { "LastModified", fileInfo.LastWriteTimeUtc.ToString("O") }
                 };
 
                 return new[] { new Document(text, fileInfo.FullName, metadata) };
             }
-            catch (OutOfMemoryException) // Let this bubble up
+            catch (OutOfMemoryException)
             {
                 throw;
             }
             catch (Exception ex)
             {
-                // Wrap unexpected errors with context
+                if (ex is ArgumentException || ex is FileNotFoundException)
+                    throw;
+
                 throw new IOException($"Failed to read file '{path}': {ex.Message}", ex);
+            }
+        }
+
+        private static string ReadFileWithEncodingDetection(string path)
+        {
+            try
+            {
+                return File.ReadAllText(path, Encoding.UTF8);
+            }
+            catch (DecoderFallbackException)
+            {
+                try
+                {
+                    return File.ReadAllText(path, Encoding.Default);
+                }
+                catch
+                {
+                    return File.ReadAllText(path, Encoding.GetEncoding("ISO-8859-1"));
+                }
             }
         }
     }

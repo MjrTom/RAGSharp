@@ -25,7 +25,7 @@ namespace SampleApp.Examples
 
             var retriever = new RagRetriever(embeddings, store);
 
-            var docs = await new UrlLoader().LoadAsync("https://en.wikipedia.org/wiki/Quantum_mechanics");
+            var docs = await new UrlLoader().LoadAsync("https://devblogs.microsoft.com/foundry/introducing-microsoft-agent-framework-the-open-source-engine-for-agentic-ai-apps/");//https://en.wikipedia.org/wiki/Quantum_mechanics
             await retriever.AddDocumentsAsync(docs);
 
             var results = await retriever.Search(query);

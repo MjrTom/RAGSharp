@@ -1,4 +1,6 @@
 ﻿using HtmlAgilityPack;
+using RAGSharp.Text;
+using RAGSharp.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,19 +11,22 @@ using System.Threading.Tasks;
 namespace RAGSharp.IO
 {
     /// <summary>
-    /// Load plain text content from a web page.
+    /// Load plain text content from a web page with HTML cleaning.
     /// </summary>
     public sealed class UrlLoader : IDocumentLoader
     {
         private readonly int _maxContentLength;
+        private readonly bool _extractMainContent;
+
         private static readonly HttpClient _http = new HttpClient
         {
             Timeout = TimeSpan.FromSeconds(30)
         };
 
-        public UrlLoader(int maxContentLength = 5_000_000)
+        public UrlLoader(int maxContentLength = 5_000_000, bool extractMainContent = true)
         {
             _maxContentLength = maxContentLength;
+            _extractMainContent = extractMainContent;
         }
 
         public async Task<IReadOnlyList<Document>> LoadAsync(string url)
@@ -41,7 +46,10 @@ namespace RAGSharp.IO
                         return Array.Empty<Document>();
 
                     var html = await resp.Content.ReadAsStringAsync();
-                    var text = ExtractPlainTextFromHtml(html);
+
+                    var text = _extractMainContent
+                        ? ExtractPlainTextFromHtml(html)
+                        : html;
 
                     return string.IsNullOrWhiteSpace(text)
                         ? Array.Empty<Document>()
@@ -60,14 +68,50 @@ namespace RAGSharp.IO
             var doc = new HtmlDocument();
             doc.LoadHtml(html);
 
-            var remove = doc.DocumentNode.SelectNodes("//script|//style|//nav|//footer|//form|//noscript|//aside")
-                         ?? Enumerable.Empty<HtmlNode>();
-            foreach (var node in remove.ToList())
-                node.Remove();
+            // Remove unwanted elements
+            var unwantedTags = new[]
+            {
+                "script", "style", "nav", "footer", "form", "noscript", "aside",
+                "header", "iframe", "button", "svg", "path", "input", "select"
+            };
+
+            foreach (var tag in unwantedTags)
+            {
+                var nodes = doc.DocumentNode.SelectNodes($"//{tag}");
+                if (nodes != null)
+                {
+                    foreach (var node in nodes.ToList())
+                        node.Remove();
+                }
+            }
+
+            // Remove common navigation/metadata classes and IDs
+            var unwantedSelectors = new[]
+            {
+                "//*[contains(@class, 'navigation')]",
+                "//*[contains(@class, 'menu')]",
+                "//*[contains(@class, 'sidebar')]",
+                "//*[contains(@class, 'comment')]",
+                "//*[contains(@class, 'advertisement')]",
+                "//*[contains(@class, 'ad-')]",
+                "//*[contains(@id, 'comments')]",
+                "//*[contains(@id, 'footer')]",
+                "//*[contains(@id, 'header')]"
+            };
+
+            foreach (var selector in unwantedSelectors)
+            {
+                var nodes = doc.DocumentNode.SelectNodes(selector);
+                if (nodes != null)
+                {
+                    foreach (var node in nodes.ToList())
+                        node.Remove();
+                }
+            }
 
             var sb = new StringBuilder();
 
-            // Optional: extract infobox tables (common on Wikipedia)
+            // Extract infobox (Wikipedia-specific)
             var infobox = doc.DocumentNode.SelectSingleNode("//table[contains(@class,'infobox')]");
             if (infobox != null)
             {
@@ -76,24 +120,37 @@ namespace RAGSharp.IO
                     var header = row.SelectSingleNode("./th")?.InnerText?.Trim();
                     var value = row.SelectSingleNode("./td")?.InnerText?.Trim();
                     if (!string.IsNullOrEmpty(header) && !string.IsNullOrEmpty(value))
-                        sb.AppendLine(string.Format("{0}: {1}", CleanText(header), CleanText(value)));
+                    {
+                        sb.AppendLine($"{TextCleaner.CleanHtmlText(header)}: {TextCleaner.CleanHtmlText(value)}");
+                    }
                 }
+                sb.AppendLine();
             }
 
-            var mainNodes = doc.DocumentNode.SelectNodes("//p|//h1|//h2|//h3|//li") ?? Enumerable.Empty<HtmlNode>();
+            // Extract main content elements
+            var mainNodes = doc.DocumentNode.SelectNodes("//article//p|//article//h1|//article//h2|//article//h3|//article//li|//main//p|//main//h1|//main//h2|//main//h3|//main//li|//p|//h1|//h2|//h3|//li")
+                            ?? Enumerable.Empty<HtmlNode>();
+
+            var seenTexts = new HashSet<string>();
+
             foreach (var node in mainNodes)
             {
-                var text = CleanText(node.InnerText);
-                if (!string.IsNullOrWhiteSpace(text))
-                    sb.AppendLine(text);
+                var text = TextCleaner.CleanHtmlText(node.InnerText);
+
+                if (string.IsNullOrWhiteSpace(text) || text.Length < 20)
+                    continue;
+
+                if (seenTexts.Contains(text))
+                    continue;
+
+                seenTexts.Add(text);
+                sb.AppendLine(text);
             }
 
-            return sb.ToString().Trim();
-        }
+            var result = sb.ToString();
+            result = TextCleaner.NormalizeWhitespace(result);
 
-        private static string CleanText(string text)
-        {
-            return text.Replace("\n", " ").Replace("\r", " ").Replace("\t", " ").Trim();
+            return result.Trim();
         }
     }
 }
