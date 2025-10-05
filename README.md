@@ -42,7 +42,7 @@ var retriever = new RagRetriever(
 
 await retriever.AddDocumentsAsync(docs);
 
-var results = await retriever.Search("quantum mechanics");
+var results = await retriever.Search("quantum mechanics",  topK: 3);
 foreach (var r in results)
     Console.WriteLine($"{r.Score:F2}: {r.Content}");
 
@@ -55,13 +55,6 @@ Every RAG pipeline in RAGSharp follows this flow. Each part is pluggable (custom
 ```
    [ DocumentLoader ] → [ TextSplitter ] → [ Embeddings ] → [ VectorStore ] → [ Retriever ]
 ```
-- **IDocumentLoader** → FileLoader, DirectoryLoader, UrlLoader, WebSearchLoader
-
-- **ITextSplitter** → RecursiveTextSplitter (paragraph → sentence → token windows)
-
-- **IEmbeddingClient** → OpenAIEmbeddingClient (swap for local models easily)
-
-- **IVectorStore** → InMemoryVectorStore, FileVectorStore (persistent)
 
 ### 1. Document Loading (RAGSharp.IO)
 Loaders fetch raw data and convert it into a list of Document objects.
