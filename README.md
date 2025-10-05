@@ -19,7 +19,7 @@ dotnet add package RAGSharp
 ```
 
 **Dependencies:**
-- `OpenAI` - Official SDK for embeddings (works with OpenAI, LM Studio, Ollama, etc.)
+- `OpenAI` - Official SDK for embeddings 
 - `SharpToken` - GPT tokenization for accurate chunking
 - `HtmlAgilityPack` - HTML parsing for web loaders
 - `Microsoft.Extensions.Logging` - Logging abstractions
@@ -70,15 +70,18 @@ That’s it — the essential building blocks for RAG, without the noise.
 
 ### 🔌 Extensibility
 Built on simple interfaces. Bring your own provider:
+
+Embeddings:
 ```csharp
-// Embeddings: 2 methods
 public interface IEmbeddingClient
 {
     Task<float[]> GetEmbeddingAsync(string text);
     Task<IReadOnlyList<float[]>> GetEmbeddingsAsync(IEnumerable<string> texts);
 }
+```
 
-// Vector Store: 4 methods
+Vector Store:
+```csharp
 public interface IVectorStore
 {
     Task AddAsync(VectorRecord item);
@@ -87,8 +90,7 @@ public interface IVectorStore
     bool Contains(string id);
 }
 ```
-No vendor lock-in. Implement either interface to use Claude, Gemini, Cohere, Postgres, Qdrant, or any provider.
-
+No vendor lock-in. Want Claude or Gemini embeddings? Cohere? A Postgres or Qdrant backend? Just implement the interface and drop it in.
 
 ## 📚 Core Components
 
@@ -97,10 +99,10 @@ Loaders fetch raw data and convert it into a list of Document objects.
 
 | Loader          | Description                                      |
 |-----------------|--------------------------------------------------|
-| FileLoader      | Load a single text file.                         |
-| DirectoryLoader | Load all files matching a pattern from a directory. |
-| UrlLoader       | Scrapes a web page (cleans HTML, removes noise) and extracts plain text. |
-| WebSearchLoader | Searches and loads content directly from Wikipedia articles. |
+| `FileLoader`      | Load a single text file.                         |
+| `DirectoryLoader` | Load all files matching a pattern from a directory. |
+| `UrlLoader`       | Scrapes a web page (cleans HTML, removes noise) and extracts plain text. |
+| `WebSearchLoader` | Searches and loads content directly from Wikipedia articles. |
 
 Custom loaders: Implement ```IDocumentLoader``` for PDFs, Word docs, databases, etc.
 
@@ -111,11 +113,11 @@ Custom loaders: Implement ```IDocumentLoader``` for PDFs, Word docs, databases, 
 | `OpenAIEmbeddingClient`  | **Included.** Works with any OpenAI-compatible API |
 | `IEmbeddingClient`       | Interface for custom providers (Claude, Gemini, Cohere, etc.) |
 | `SharpTokenTokenizer`    | **Included.** GPT-family token counting |
-| `ITokenizer`             | Interface for custom tokenizers (Uses ```SharpToken```) |
+| `ITokenizer`             | Interface for custom tokenizers (Uses `SharpToken`) |
 
 
 ### 3. Text Splitting (RAGSharp.Text)
-Token-aware recursive splitter that respects semantic boundaries:
+`RecursiveTextSplitter` - Token-aware recursive splitter that respects semantic boundaries:
 
 ```csharp
 var tokenizer = new SharpTokenTokenizer("gpt-4");
@@ -147,18 +149,18 @@ For each paragraph:
 - Splits by paragraphs first
 - Falls back to sentences if chunks too large
 - Final fallback: sliding token window with overlap
-- Uses ```SharpTokenTokenizer``` for token counting
+- Uses `SharpTokenTokenizer` for token counting
 
-Implement ```ITextSplitter``` for custom splitting strategies.
+Implement `ITextSplitter` for custom splitting strategies.
 
 
 ### 4. Vector Stores (RAGSharp.Stores)
 
 | Store                | Use Case                                                                 |
 |----------------------|--------------------------------------------------------------------------|
-| IVectorStore         | 4-method interface for any database (Postgres, Qdrant, Redis, etc.)      |
-| InMemoryVectorStore  | Fastest for demos, testing, and short-lived processes.                   |
-| FileVectorStore      | Persistent, file-backed storage (uses JSON), perfect for retaining your indexed knowledge base between runs. |
+| `IVectorStore`         | 4-method interface for any database (Postgres, Qdrant, Redis, etc.)      |
+| `InMemoryVectorStore`  | Fastest for demos, testing, and short-lived processes.                   |
+| `FileVectorStore`      | Persistent, file-backed storage (uses JSON), perfect for retaining your indexed knowledge base between runs. |
 
 #### Why no built-in database support?
 - Most RAG use cases work fine with file storage (small knowledge bases)
@@ -187,11 +189,11 @@ dotnet run
 
 | Example              | Description                                                                 |
 |----------------------|--------------------------------------------------------------------------------|
-| Example1_QuickStart  | The basic 4-step process: Load File → Init Retriever → Add Docs → Search.   |
-| Example2_FilesSearch | Loading multiple documents from a directory with persistent storage.        |
-| Example3_WebDocSearch| Loading content from the web (UrlLoader and WebSearchLoader).               |
-| Example4_Barebones   | Using the low-level API: manual embedding and cosine similarity.            |
-| Example5_Advanced    | Full pipeline customization, injecting custom splitter, logger, and persistent store. |
+| `Example1_QuickStart`  | The basic 4-step process: Load File → Init Retriever → Add Docs → Search.   |
+| `Example2_FilesSearch` | Loading multiple documents from a directory with persistent storage.        |
+| `Example3_WebDocSearch`| Loading content from the web (UrlLoader and WebSearchLoader).               |
+| `Example4_Barebones`   | Using the low-level API: manual embedding and cosine similarity.            |
+| `Example5_Advanced`    | Full pipeline customization, injecting custom splitter, logger, and persistent store. |
 
 
 ### 📂 Project Structure
@@ -212,7 +214,7 @@ SampleApp/
 ```
 
 ## 📜 License
-RAGSharp is distributed under the MIT License.
+MIT License.
 
 ## 💡 Status
 Early stage, suitable for prototypes and production apps where simplicity matters.
