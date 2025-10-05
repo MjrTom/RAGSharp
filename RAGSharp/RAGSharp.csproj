@@ -1,10 +1,37 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
 	<PropertyGroup>
 		<TargetFramework>netstandard2.0</TargetFramework>
 		<LangVersion>8.0</LangVersion>
+		<Nullable>enable</Nullable>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+
+		<!-- NuGet metadata -->
+		<PackageId>RAGSharp</PackageId>
+		<Version>1.0.0</Version>
+		<Authors>Senthil V</Authors>
+		<Company>Senthil V</Company>
+		<Description>
+			Lightweight, extensible Retrieval-Augmented Generation (RAG) library with clean, minimal components for building RAG pipelines. Works out of the box with document loading, chunking, embeddings, and vector search.
+		</Description>
+		<PackageProjectUrl>https://github.com/mrrazor22/ragsharp</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/mrrazor22/ragsharp</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageTags>rag;retrieval-augmented-generation;embeddings;vector-search;vector-database;llm;ai;semantic-search;openai;langchain;document-retrieval;text-chunking;knowledge-base;chatbot;question-answering;nlp;machine-learning;dotnet;csharp;lmstudio;ollama;huggingface;azure-openai;gpt;text-embeddings;similarity-search;cosine-similarity;information-retrieval</PackageTags>
+		<Title>RAGSharp</Title>
+		<PackAsTool>False</PackAsTool>
+		<Copyright>© 2025 Senthil V</Copyright>
+		<PackageIcon>icon.png</PackageIcon>
 	</PropertyGroup>
 
+	<!-- Include license + readme -->
+	<ItemGroup>
+		<None Include="..\LICENSE.txt" Pack="true" PackagePath="" />
+		<None Include="..\README.md" Pack="true" PackagePath="" />
+	</ItemGroup>
+
+	<!-- Dependencies -->
 	<ItemGroup>
 		<PackageReference Include="HtmlAgilityPack" Version="1.12.4" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.9" />
@@ -12,4 +39,8 @@
 		<PackageReference Include="SharpToken" Version="2.0.4" />
 	</ItemGroup>
 
+	<!-- Explicitly exclude demo/test folders from packaging -->
+	<ItemGroup>
+		<None Remove="..\SampleApp\**" />
+	</ItemGroup>
 </Project>

@@ -34,9 +34,9 @@ using RAGSharp.IO;
 using RAGSharp.RAG;
 using RAGSharp.Stores;
 
+//load doc
 var docs = await new FileLoader().LoadAsync("sample.txt");
 
-// OpenAIEmbeddingClient works with any OpenAI-compatible API
 var retriever = new RagRetriever(
     embeddings: new OpenAIEmbeddingClient(
         baseUrl: "http://127.0.0.1:1234/v1",
@@ -46,20 +46,16 @@ var retriever = new RagRetriever(
     store: new InMemoryVectorStore()
 );
 
+//ingest
 await retriever.AddDocumentsAsync(docs);
 
+//search
 var results = await retriever.Search("quantum mechanics",  topK: 3);
 foreach (var r in results)
     Console.WriteLine($"{r.Score:F2}: {r.Content}");
 
 ```
-This example uses a local embedding model hosted by LM Studio ([docs](https://lmstudio.ai/docs/app/api)) and an in-memory vector store.
-
-Works with:
-- OpenAI API (api.openai.com)
-- LM Studio (localhost:1234)
-- Ollama via OpenAI shim
-- Any OpenAI-compatible embedding service
+This example uses a local embedding model hosted by ([LM Studio](https://lmstudio.ai/docs/app/api)) and an in-memory vector store.
 
 ## ⚙️ Architecture. 
 Every RAG pipeline in RAGSharp follows this flow. Each part is pluggable:
@@ -69,9 +65,9 @@ Every RAG pipeline in RAGSharp follows this flow. Each part is pluggable:
 That’s it — the essential building blocks for RAG, without the noise.
 
 ### 🔌 Extensibility
-Built on simple interfaces. Bring your own provider:
+Built on simple interfaces.
 
-Embeddings:
+For Embeddings:
 ```csharp
 public interface IEmbeddingClient
 {
@@ -80,7 +76,7 @@ public interface IEmbeddingClient
 }
 ```
 
-Vector Store:
+For Vector Store:
 ```csharp
 public interface IVectorStore
 {
@@ -111,7 +107,7 @@ Custom loaders: Implement ```IDocumentLoader``` for PDFs, Word docs, databases, 
 | Component                | Description                                                                 |
 |--------------------------|-----------------------------------------------------------------------------|
 | `OpenAIEmbeddingClient`  | **Included.** Works with any OpenAI-compatible API |
-| `IEmbeddingClient`       | Interface for custom providers (Claude, Gemini, Cohere, etc.) |
+| `IEmbeddingClient`       | 2-method interface for custom providers (Claude, Gemini, Cohere, etc.) |
 | `SharpTokenTokenizer`    | **Included.** GPT-family token counting |
 | `ITokenizer`             | Interface for custom tokenizers (Uses `SharpToken`) |
 
@@ -158,14 +154,14 @@ Implement `ITextSplitter` for custom splitting strategies.
 
 | Store                | Use Case                                                                 |
 |----------------------|--------------------------------------------------------------------------|
-| `IVectorStore`         | 4-method interface for any database (Postgres, Qdrant, Redis, etc.)      |
-| `InMemoryVectorStore`  | Fastest for demos, testing, and short-lived processes.                   |
+| `IVectorStore`         | 4-method interface for any database (Postgres, Qdrant, Redis, etc.)    |
+| `InMemoryVectorStore`  | Fast, ephemeral storage for demos, testing, and temporary searches.    |
 | `FileVectorStore`      | Persistent, file-backed storage (uses JSON), perfect for retaining your indexed knowledge base between runs. |
 
 #### Why no built-in database support?
-- Most RAG use cases work fine with file storage (small knowledge bases)
-- Database needs vary (Postgres vs Qdrant vs Redis)
-- Implement ```IVectorStore``` in ~50 lines for your database
+- Many use cases don't need a database (small knowledge bases, temporary searches)
+- Database choices vary widely (Postgres, Qdrant, Redis, SQLite etc)
+- Implement IVectorStore in ~50 lines for your preferred database
 - Keeps core library lightweight
 
 ### 5. Retriever (RAGSharp.RAG)
